@@ -12,18 +12,16 @@ class IncomeCalculator:
         self.is_married = is_married
         self.is_blind = is_blind
 
-    def calculate_income_tax(self, adjusted_net_income):
-
-        # Calculate taxable income
-        taxable_income = max(0, adjusted_net_income - self.personal_allowance)
-
+    def calculate_income_tax(self):
         # Apply Scottish tax rates if the user is in Scotland
         if self.is_scottish:
-            return self.calculate_scottish_tax(taxable_income)
+            return self.calculate_scottish_tax()
         else:
-            return self.calculate_uk_tax(taxable_income)
+            return self.calculate_uk_tax()
 
-    def calculate_uk_tax(self, taxable_income):
+    def calculate_uk_tax(self):
+        taxable_income = max(0, self.annual_income - self.personal_allowance)
+
         # UK tax bands and rates
         uk_tax_bands = [
             (0, 37700, 0.20),
@@ -31,7 +29,18 @@ class IncomeCalculator:
             (125141, float('inf'), 0.45)
         ]
 
-        return self.calculate_tax(taxable_income, uk_tax_bands)
+        total_tax = 0
+
+        for start, end, rate in uk_tax_bands:
+            if taxable_income > end:
+                tax_at_band = (end - start + 1) * rate  # Calculate tax for the entire band
+                total_tax += tax_at_band
+            elif start <= taxable_income <= end:
+                tax_at_band = (taxable_income - start + 1) * rate  # Calculate tax within the band
+                total_tax += tax_at_band
+                break  # Break since we've covered the entire taxable income
+
+        return total_tax
 
     def calculate_scottish_tax(self, taxable_income):
         # Scottish tax bands and rates
@@ -44,20 +53,6 @@ class IncomeCalculator:
         ]
 
         return self.calculate_tax(taxable_income, scottish_tax_bands)
-
-    def calculate_tax(self, taxable_income, tax_bands):
-        total_tax = 0
-
-        for start, end, rate in tax_bands:
-            if taxable_income > end:
-                tax_at_band = (end - start + 1) * rate  # Calculate tax for the entire band
-                total_tax += tax_at_band
-            elif start <= taxable_income <= end:
-                tax_at_band = (taxable_income - start + 1) * rate  # Calculate tax within the band
-                total_tax += tax_at_band
-                break  # Break since we've covered the entire taxable income
-
-        return total_tax
 
     def calculate_national_insurance(self):
         weekly_income = self.annual_income / 52.0
@@ -107,8 +102,6 @@ class IncomeCalculator:
         # Calculate pension contributions
         pension_contributions = self.calculate_pension_contributions()
 
-        print("pension contributions itermediate (calculated):", (self.pension_percentage*1000))
-
         # Adjusted annual income after deducting pension contributions
         adjusted_annual_income = self.annual_income - pension_contributions
 
@@ -120,7 +113,7 @@ class IncomeCalculator:
         adjusted_net_income = adjusted_annual_income - married_rebate - blindness_allowance
 
         # Calculate income tax
-        income_tax = self.calculate_income_tax(adjusted_net_income)
+        income_tax = self.calculate_income_tax()
 
         # Calculate national insurance
         ni_contributions = self.calculate_national_insurance()
@@ -146,34 +139,38 @@ class IncomeCalculator:
 # to do - handle bonus month
 
 # Example usage:
-annual_income = 73548
+annual_income = 52000
+# annual_income = 73548
 # annual_income = 72500
 
 bonus = 0
 pension_percentage = 5  # Adjust as needed
 
 # Assuming Plan 1 for student loan, adjust plan_type as needed
-calculator = IncomeCalculator(annual_income, bonus, pension_percentage, plan_type="Plan 1",
+calculator = IncomeCalculator(annual_income, bonus, pension_percentage=5, plan_type="Plan 1",
                               is_scottish=False, is_blind=False, is_married=False)
 
-# tax_uk = calculator.calculate_income_tax()  # For users outside Scotland
+tax = calculator.calculate_uk_tax()
+print(f"Tax: £{tax:.2f}")
+
+total_deductions, tax, ni, student_loan_deductions, pension_contributions = calculator.calculate_total_deductions()
+
 # ni = calculator.calculate_national_insurance()
 # student_loan_deductions = calculator.calculate_student_loan_deductions()
 # pension_contributions = calculator.calculate_total_deductions()
 net_income = calculator.calculate_net_income()
 
-total_deductions, tax, ni, student_loan_deductions, pension_contributions = calculator.calculate_total_deductions()
 
 # Print the results
-print(f"--------")
-print(f"Pension %: {pension_percentage:.2f}")
-print(f"UK Income Tax: £{tax:.2f}")
-print(f"National Insurance Code A: £{ni:.2f}")
-print(f"Student Loan Deductions: £{calculator.calculate_student_loan_deductions():.2f}")
-print(f"Pension Contributions: £{pension_contributions:.2f}")
-print(f"Total Deductions (UK): £{total_deductions:.2f}")
-print(f"Net Income (UK): £{net_income:.2f}")
-print(f"Net Monthly Income (UK): £{net_income / 12:.2f}")
+# print(f"--------")
+# print(f"Pension %: {pension_percentage:.2f}")
+# print(f"UK Income Tax: £{tax:.2f}")
+# print(f"National Insurance Code A: £{ni:.2f}")
+# print(f"Student Loan Deductions: £{calculator.calculate_student_loan_deductions():.2f}")
+# print(f"Pension Contributions: £{pension_contributions:.2f}")
+# print(f"Total Deductions (UK): £{total_deductions:.2f}")
+# print(f"Net Income (UK): £{net_income:.2f}")
+# print(f"Net Monthly Income (UK): £{net_income / 12:.2f}")
 
 
 # Create a DataFrame for the table
