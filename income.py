@@ -1,8 +1,10 @@
 import pandas as pd
+import json
 
 class IncomeCalculator:
-    def __init__(self, annual_income, personal_allowance = 12570, bonus=0,
+    def __init__(self, config, annual_income, personal_allowance = 12570, bonus=0,
                  pension_percentage=0, plan_type="Plan 1", is_scottish=False, is_married=False, is_blind=False):
+        self.config = config
         self.annual_income = annual_income
         self.bonus = bonus
         self.personal_allowance = personal_allowance
@@ -16,18 +18,17 @@ class IncomeCalculator:
         """
         Take a £ value and calculate the tax on it, with logging for each band.
         """
-        tax_bands = [
-            (0, 12570, 0.0),         # No tax band
-            (12571, 50270, 0.20),    # 20% tax band
-            (50271, 125140, 0.40),   # 40% tax band
-            (125141, None, 0.45)     # 45% tax band
-        ]
-        
+        tax_bands = self.config['uk_tax_bands']
         tax = 0
         taxable_income = income
 
-        for lower, upper, rate in tax_bands:
+        for band in tax_bands:
+            lower = band['lower']
+            upper = band['upper']
+            rate = band['rate']
+
             if taxable_income > lower:
+
                 if upper is None:
                     taxed_amount = taxable_income - lower
                 else:
@@ -63,19 +64,17 @@ class IncomeCalculator:
         return total_ni_contributions * 52  # Multiply by the number of weeks in a year
 
     def calculate_student_loan_deductions(self):
-        if self.plan_type == "Plan 1":
-            threshold = 22015
-            rate = 0.09
-        elif self.plan_type == "Plan 2":
-            threshold = 27295
-            rate = 0.09
-        elif self.plan_type == "Plan 4":
-            threshold = 27660
-            rate = 0.09
-        else:
-            # Assuming Postgraduate Loan plan
-            threshold = 21000
-            rate = 0.06
+        # Retrieve student loan plans from the configuration
+        student_loan_plans = self.config.get('student_loan_plans', {})
+        plan_details = student_loan_plans.get(self.plan_type, None)
+
+        if plan_details is None:
+            # Handle the case where the plan_type is not found in the configuration
+            print(f"Plan type {self.plan_type} not found in configuration.")
+            return 0
+
+        threshold = plan_details['threshold']
+        rate = plan_details['rate']
 
         # Calculate student loan deductions
         if self.annual_income <= threshold:
@@ -125,13 +124,25 @@ class IncomeCalculator:
 
 # to do - handle bonus month
 
+# Load configuration data
+config_path = 'config/config.json'
+with open(config_path, 'r') as config_file:
+    config = json.load(config_file)
+
 annual_income = 73548
 
 bonus = 0
 pension_percentage = 5  # Adjust as needed
 
+# tax_bands = config['uk_tax_bands']
+# print("tax bands:")
+# print(tax_bands)
+# for lower, upper, rate in tax_bands:
+#     print(lower, upper, rate)
+
+
 # Assuming Plan 1 for student loan, adjust plan_type as needed
-calculator = IncomeCalculator(annual_income, bonus, pension_percentage=5, plan_type="Plan 1",
+calculator = IncomeCalculator(config=config, annual_income=annual_income, bonus=bonus, pension_percentage=5, plan_type="Plan 1",
                               is_scottish=False, is_blind=False, is_married=False)
 
 total_deductions, tax, ni, student_loan_deductions, pension_contributions = calculator.calculate_total_deductions()

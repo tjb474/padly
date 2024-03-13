@@ -1,0 +1,14 @@
+{
+    "uk_tax_bands": [
+      {"lower": 0, "upper": 12570, "rate": 0.0},
+      {"lower": 12571, "upper": 50270, "rate": 0.2},
+      {"lower": 50271, "upper": 125140, "rate": 0.4},
+      {"lower": 125141, "upper": null, "rate": 0.45}
+    ],
+    "student_loan_plans": {
+      "Plan 1": {"threshold": 22015, "rate": 0.09},
+      "Plan 2": {"threshold": 27295, "rate": 0.09},
+      "Plan 4": {"threshold": 27660, "rate": 0.09},
+      "Postgraduate": {"threshold": 21000, "rate": 0.06}
+    }
+  }
