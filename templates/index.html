@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Income Tax Calculator</title>
+</head>
+<body>
+    <h1>Income Tax Calculator</h1>
+    <form action="/calculate" method="post">
+        Annual Income: <input type="number" name="annual_income" required><br>
+        Bonus: <input type="number" name="bonus" required><br>
+        Pension Contributions (%): <input type="number" name="pension_percentage" required><br>
+        Location: 
+        <select name="plan_type">
+            <option value="UK">UK</option>
+            <option value="Scotland">Scotland</option>
+        </select><br>
+        Student Loan Plan Type: 
+        <select name="plan_type">
+            <option value="Plan 1">Plan 1</option>
+            <option value="Plan 2">Plan 2</option>
+            <option value="Plan 4">Plan 4</option>
+            <option value="None">Plan 4</option>
+        </select><br>
+        <input type="submit" value="Calculate">
+    </form>
+</body>
+</html>
