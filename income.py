@@ -1,10 +1,14 @@
 import pandas as pd
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import json
 
+
 class IncomeCalculator:
-    def __init__(self, config, annual_income, personal_allowance = 12570, bonus=0,
+    def __init__(self, config_path, annual_income, personal_allowance = 12570, bonus=0,
                  pension_percentage=0, plan_type="Plan 1", is_scottish=False, is_married=False, is_blind=False):
-        self.config = config
+        with open(config_path, 'r') as config_file:
+            self.config = json.load(config_file)
         self.annual_income = annual_income
         self.bonus = bonus
         self.personal_allowance = personal_allowance
@@ -122,55 +126,40 @@ class IncomeCalculator:
 
         return net_income
 
+    def generate_monthly_income(self, start_date_str, end_date_str):
+        start_date = datetime.strptime(start_date_str, "%d-%m-%Y")
+        end_date = datetime.strptime(end_date_str, "%d-%m-%Y")
+
+        columns = ['Date', 'Gross Income', 'Pension Contributions', 'Income Tax', 'NI Contributions', 'Student Loan', 'Net Income']
+        data = []
+
+        current_date = start_date
+        while current_date <= end_date:
+            # Reuse self attributes for the calculation
+            total_deductions, tax, ni, student_loan_deductions, pension_contributions = self.calculate_total_deductions()
+            net_income = self.calculate_net_income()
+
+            formatted_date = current_date.strftime("%d-%m-%Y")
+            monthly_data = [formatted_date, self.annual_income / 12, pension_contributions / 12, tax / 12, ni / 12, student_loan_deductions / 12, net_income / 12]
+            data.append(monthly_data)
+
+            current_date += relativedelta(months=+1)
+
+        df = pd.DataFrame(data, columns=columns)
+        return df
+
 # to do - handle bonus month
 
-# Load configuration data
 config_path = 'config/config.json'
-with open(config_path, 'r') as config_file:
-    config = json.load(config_file)
-
 annual_income = 73548
-
 bonus = 0
 pension_percentage = 5  # Adjust as needed
 
-# tax_bands = config['uk_tax_bands']
-# print("tax bands:")
-# print(tax_bands)
-# for lower, upper, rate in tax_bands:
-#     print(lower, upper, rate)
-
-
-# Assuming Plan 1 for student loan, adjust plan_type as needed
-calculator = IncomeCalculator(config=config, annual_income=annual_income, bonus=bonus, pension_percentage=5, plan_type="Plan 1",
+calculator = IncomeCalculator(config_path=config_path, annual_income=annual_income, bonus=bonus, pension_percentage=pension_percentage, plan_type="Plan 1",
                               is_scottish=False, is_blind=False, is_married=False)
 
-total_deductions, tax, ni, student_loan_deductions, pension_contributions = calculator.calculate_total_deductions()
+start_date = "01-03-2024"
+end_date = "01-03-2025"
 
-net_income = calculator.calculate_net_income()
-
-# Create a DataFrame for the table
-data = {
-    'Gross Income': [],
-    'Pension Contributions': [],
-    'Income Tax': [],
-    'NI Contributions': [],
-    'Student Loan': [],
-    'Net Income': [],
-}
-
-data['Gross Income'].append(annual_income)
-data['Pension Contributions'].append(pension_contributions)
-data['Income Tax'].append(tax)
-data['NI Contributions'].append(ni)
-data['Student Loan'].append(student_loan_deductions)
-data['Net Income'].append(net_income)
-
-
-# Create the DataFrame
-df = pd.DataFrame(data).T
-df.columns = ['Annual']
-df['Monthly'] = df['Annual'] / 12
-
-# Print the table
-print(df)
+monthly_income_df = calculator.generate_monthly_income(start_date, end_date)
+print(monthly_income_df)
