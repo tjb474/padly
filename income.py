@@ -5,7 +5,7 @@ import json
 
 
 class IncomeCalculator:
-    def __init__(self, config_path, annual_income, start_date_str, end_date_str, personal_allowance = 12570, bonus=0,
+    def __init__(self, config_path, annual_income, personal_allowance = 12570, bonus=0,
                  pension_percentage=0, plan_type="Plan 1", is_scottish=False, is_married=False, is_blind=False):
         with open(config_path, 'r') as config_file:
             self.config = json.load(config_file)
@@ -17,8 +17,6 @@ class IncomeCalculator:
         self.is_scottish = is_scottish
         self.is_married = is_married
         self.is_blind = is_blind
-        self.start_date_str = start_date_str
-        self.end_date_str = end_date_str
 
     def calculate_uk_tax(self, income):
         """
@@ -128,9 +126,9 @@ class IncomeCalculator:
 
         return net_income
 
-    def generate_monthly_data(self):
-        start_date = datetime.strptime(self.start_date_str, "%d-%m-%Y")
-        end_date = datetime.strptime(self.end_date_str, "%d-%m-%Y")
+    def generate_monthly_income(self, start_date_str, end_date_str):
+        start_date = datetime.strptime(start_date_str, "%d-%m-%Y")
+        end_date = datetime.strptime(end_date_str, "%d-%m-%Y")
 
         columns = ['Date', 'Gross Income', 'Pension Contributions', 'Income Tax', 'NI Contributions', 'Student Loan', 'Net Income']
         data = []
@@ -150,18 +148,18 @@ class IncomeCalculator:
         df = pd.DataFrame(data, columns=columns)
         return df
 
-# # to do - handle bonus month
+# to do - handle bonus month
 
-# config_path = 'config/config.json'
-# annual_income = 73548
-# bonus = 0
-# pension_percentage = 5  # Adjust as needed
+config_path = 'config/config.json'
+annual_income = 73548
+bonus = 0
+pension_percentage = 5  # Adjust as needed
 
-# calculator = IncomeCalculator(config_path=config_path, annual_income=annual_income, bonus=bonus, pension_percentage=pension_percentage, plan_type="Plan 1",
-#                               is_scottish=False, is_blind=False, is_married=False)
+calculator = IncomeCalculator(config_path=config_path, annual_income=annual_income, bonus=bonus, pension_percentage=pension_percentage, plan_type="Plan 1",
+                              is_scottish=False, is_blind=False, is_married=False)
 
-# start_date = "01-03-2024"
-# end_date = "01-03-2025"
+start_date = "01-03-2024"
+end_date = "01-03-2025"
 
-# monthly_income_df = calculator.generate_monthly_data(start_date, end_date)
-# print(monthly_income_df)
+monthly_income_df = calculator.generate_monthly_income(start_date, end_date)
+print(monthly_income_df)
