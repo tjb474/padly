@@ -1,14 +1,14 @@
 import pandas as pd
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import json
 
+
 class IncomeCalculator:
-<<<<<<< HEAD
-    def __init__(self, config, annual_income, personal_allowance = 12570, bonus=0,
-=======
-    def __init__(self, config_path, annual_income, start_date_str, end_date_str, personal_allowance = 12570, bonus=0,
->>>>>>> 6d06040... Add FinanceManager class to handle income/expsense streams
+    def __init__(self, config_path, annual_income, personal_allowance = 12570, bonus=0,
                  pension_percentage=0, plan_type="Plan 1", is_scottish=False, is_married=False, is_blind=False):
-        self.config = config
+        with open(config_path, 'r') as config_file:
+            self.config = json.load(config_file)
         self.annual_income = annual_income
         self.bonus = bonus
         self.personal_allowance = personal_allowance
