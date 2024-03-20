@@ -1,50 +1,53 @@
 import json
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from pymongo import MongoClient
 import pandas as pd
+# from dotenv import load_dotenv
+import os
 from income import IncomeCalculator
 from mortgage import MortgageCalculator
 
 class FinanceManager:
-    def __init__(self):
-        # Streams will be stored as a dictionary with unique IDs as keysfinancew
-        self.streams = {}
-        self.next_id = 1  # Incremental ID to keep track of the next stream ID
+    def __init__(self, db_uri, db_name):
+        self.client = MongoClient(db_uri)
+        self.db = self.client[db_name]
+        self.streams_collection = self.db.streams  # Use a 'streams' collection
 
-    def add_stream(self, stream_type, config_path, **kwargs):
+    def add_stream(self, user_id, stream_type, **kwargs):
         """
-        Add a new income or expense stream.
+        Add a new income or expense stream to MongoDB.
 
-        :param stream_type: A string indicating the type of stream ('income' or 'expense').
-        :param config: Configuration data required for the stream calculator.
-        :param kwargs: Additional arguments required for the specific calculator.
-        :return: The ID of the newly added stream.
+        :param user_id: ID of the user adding the stream.
+        :param stream_type: Type of the stream ('income' or 'expense').
+        :param kwargs: Additional arguments for the specific calculator.
+        :return: The ID of the newly added stream in MongoDB.
         """
         if stream_type == 'income':
-            calculator = IncomeCalculator(config_path=config_path, **kwargs)
+            # Assuming generate_monthly_data() doesn't rely on external state and can be called here
+            data = IncomeCalculator(**kwargs).generate_monthly_data()
         elif stream_type == 'expense':
-            calculator = MortgageCalculator(**kwargs)
+            data = MortgageCalculator(**kwargs).generate_monthly_data()
         else:
             raise ValueError("Invalid stream type. Please choose 'income' or 'expense'.")
 
-        data = calculator.generate_monthly_data()
-
-        # Add the calculator and data stream to the streams dictionary
-        stream_id = self.next_id
-        self.streams[stream_id] = {'calculator': calculator, 'data': data}
-        self.next_id += 1
-
-        return stream_id
+        stream_document = {
+            'user_id': user_id,
+            'stream_type': stream_type,
+            'data': data,
+            'kwargs': kwargs  # Store the original parameters for potential future recalculations
+        }
+        result = self.streams_collection.insert_one(stream_document)
+        return result.inserted_id
 
     def remove_stream(self, stream_id):
         """
-        Remove an existing stream by its ID.
+        Remove an existing stream by its MongoDB ID.
 
-        :param stream_id: The ID of the stream to remove.
+        :param stream_id: The MongoDB ID of the stream to remove.
         """
-        if stream_id in self.streams:
-            del self.streams[stream_id]
-        else:
+        result = self.streams_collection.delete_one({'_id': stream_id})
+        if result.deleted_count == 0:
             raise ValueError("Stream ID not found.")
 
     def generate_monthly_statement(self, start_date_str, end_date_str):
@@ -65,7 +68,15 @@ class FinanceManager:
             return pd.DataFrame()
 
 
-finance_manager = FinanceManager()
+# example usage
+
+# load_dotenv()  # Load environment variables from .env file
+
+# db_uri = os.getenv("MONGO_DB_URI")
+# db_name = os.getenv("DB_NAME")
+
+finance_manager = FinanceManager(db_uri="mongodb://localhost:27017/", db_name="finance_app_db")
+
 
 # Example configuration and details for adding an income stream
 config_path = 'config/config.json'
@@ -75,6 +86,7 @@ pension_percentage = 5
 
 # Add an income stream
 stream_id = finance_manager.add_stream(
+    user_id="tom",
     stream_type='income',
     config_path=config_path,
     annual_income=annual_income,
@@ -96,6 +108,7 @@ years = 30  # 30-year mortgage
 
 # Add a mortgage (expense) stream
 mortgage_stream_id = finance_manager.add_stream(
+    user_id="tom",
     stream_type='expense',
     config_path=config_path,
     principal=principal,
@@ -106,4 +119,3 @@ mortgage_stream_id = finance_manager.add_stream(
 
 print(f"Income stream added with ID: {stream_id}")
 
-print(finance_manager.streams)
