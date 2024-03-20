@@ -5,7 +5,7 @@ import json
 
 
 class IncomeCalculator:
-    def __init__(self, config_path, annual_income, personal_allowance = 12570, bonus=0,
+    def __init__(self, config_path, annual_income, start_date_str, end_date_str, personal_allowance = 12570, bonus=0,
                  pension_percentage=0, plan_type="Plan 1", is_scottish=False, is_married=False, is_blind=False):
         with open(config_path, 'r') as config_file:
             self.config = json.load(config_file)
@@ -41,11 +41,9 @@ class IncomeCalculator:
                     taxed_amount = min(taxable_income, upper) - lower
                 tax_from_band = taxed_amount * rate
                 tax += tax_from_band
-                print(f"Tax from {lower} to {upper if upper is not None else 'infinity'} at {rate*100}%: £{tax_from_band:.2f}")
                 if taxable_income <= upper or upper is None:
                     break
 
-        print(f"Total Tax: £{tax:.2f}")
         return tax
 
 
