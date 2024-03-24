@@ -5,11 +5,11 @@ import numpy as np
 import pandas as pd
 
 class MortgageCalculator:
-    def __init__(self, principal, annual_interest_rate, years, start_date):
+    def __init__(self, principal, annual_interest_rate, years, start_date_str):
         self.principal = principal
         self.annual_interest_rate = annual_interest_rate
         self.years = years
-        self.start_date = datetime.strptime(start_date, "%d-%m-%Y")
+        self.start_date = datetime.strptime(start_date_str, "%d-%m-%Y")
         self.monthly_interest_rate = annual_interest_rate / 12 / 100
         self.total_payments = years * 12
 
@@ -20,7 +20,8 @@ class MortgageCalculator:
         monthly_payment = p * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
         return monthly_payment
 
-    def generate_amortization_schedule(self):
+    def generate_monthly_data(self):
+        """Generate the amortisation schedule"""
         monthly_payment = self.calculate_monthly_payment()
         amortization_schedule = []
         
@@ -44,7 +45,7 @@ class MortgageCalculator:
         return pd.DataFrame(amortization_schedule)
 
     def plot_amortization_schedule(self):
-        schedule = self.generate_amortization_schedule()
+        schedule = self.generate_monthly_data()
         
         plt.figure(figsize=(14, 7))
         ax1 = plt.gca()  # Get current Axes instance on the current figure
@@ -76,9 +77,9 @@ class MortgageCalculator:
         plt.tight_layout()
         plt.show()
 
-# Example usage
-calculator = MortgageCalculator(principal=500000, annual_interest_rate=5, years=30, start_date="01-03-2024")
-amortization_schedule = calculator.generate_amortization_schedule()
-calculator.plot_amortization_schedule()
+# # Example usage
+# calculator = MortgageCalculator(principal=500000, annual_interest_rate=5, years=30, start_date_str="01-03-2024")
+# amortization_schedule = calculator.generate_monthly_data()
+# calculator.plot_amortization_schedule()
 
-print(amortization_schedule.head(10))
+# print(amortization_schedule.head(10))
