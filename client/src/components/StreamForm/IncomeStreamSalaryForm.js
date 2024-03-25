@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './IncomeStreamSalaryForm.css'; // Import the CSS styles
 
-function IncomeStreamSalaryForm({ onSubmit }) {
+function IncomeStreamSalaryForm() {
   const [formData, setFormData] = useState({
     annualIncome: '',
     personalAllowance: '',
@@ -11,20 +11,61 @@ function IncomeStreamSalaryForm({ onSubmit }) {
     isScottish: false,
     isMarried: false,
     isBlind: false,
+    startDate: '',
+    endDate: ''
   });
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    // Update form data state based on input type
     setFormData(prevData => ({
       ...prevData,
       [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    // Assuming your Flask API is running on localhost:5000
+    const API_URL = 'http://localhost:5000/add_stream';
+
+
+    const payload = {
+      ...formData,
+      user_id: 'user123', // This should be dynamically set based on your application's user context
+      stream_type: 'income',
+      annual_income: formData.annualIncome,
+      personal_allowance: formData.personalAllowance,
+      bonus: formData.bonus,
+      pension_percentage: formData.pensionPercentage,
+      plan_type: formData.planType,
+      is_scottish: formData.isScottish,
+      is_married: formData.isMarried,
+      is_blind: formData.isBlind,
+      start_date_str: formData.startDate, // Map startDate to start_date_str
+      end_date_str: formData.endDate, // Map endDate to end_date_str
+    };
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const result = await response.json();
+      console.log('Stream added successfully:', result);
+
+      // Optionally, clear the form or provide feedback to the user
+    } catch (error) {
+      console.error('Error adding stream:', error);
+    }
   };
 
   return (
@@ -120,6 +161,29 @@ function IncomeStreamSalaryForm({ onSubmit }) {
           />
           Is Blind?
         </label>
+      </div>
+      
+      <div className="form-field">
+        <label htmlFor="startDate">Start Date:</label>
+        <input
+          type="date"
+          id="startDate"
+          name="startDate"
+          value={formData.startDate}
+          onChange={handleChange}
+        />
+      </div>
+
+      {/* End Date field */}
+      <div className="form-field">
+        <label htmlFor="endDate">End Date:</label>
+        <input
+          type="date"
+          id="endDate"
+          name="endDate"
+          value={formData.endDate}
+          onChange={handleChange}
+        />
       </div>
 
       <button type="submit" className="submit-btn">Add Income Stream</button>

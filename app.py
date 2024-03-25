@@ -1,43 +1,64 @@
+import logging
 from flask import Flask, request, jsonify
-from income import IncomeCalculator
-import json
+from finance_manager import FinanceManager
 
 app = Flask(__name__)
 
-@app.route('/calculate', methods=['POST'])
-def calculate_income():
-    # Load configuration data
-    config_path = 'config/config.json'
-    with open(config_path, 'r') as config_file:
-        config = json.load(config_file)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
-    # Extract data from request
-    data = request.get_json()
-    annual_income = data['annualIncome']
-    bonus = data['bonus']
-    pension_percentage = data['pensionPercentage']
-    plan_type = data['planType']
+# Assuming FinanceManager initialization doesn't require parameters,
+# or you have predefined parameters to pass.
+finance_manager = FinanceManager(db_uri="mongodb://localhost:27017/", db_name="finance_app_db")
 
-    # Create an instance of IncomeCalculator with the provided data
-    calculator = IncomeCalculator(config=config, annual_income=annual_income, bonus=bonus, 
-                                  pension_percentage=pension_percentage, plan_type=plan_type,
-                                  is_scottish=False, is_blind=False, is_married=False)
-    
-    # Perform calculations
-    total_deductions, tax, ni, student_loan_deductions, pension_contributions = calculator.calculate_total_deductions()
-    net_income = calculator.calculate_net_income()
+@app.route('/add_stream', methods=['POST'])
+def add_stream():
+    data = request.json
+    logging.info(f'Received request to add stream: {data}')
+    user_id = data.get('user_id')
+    stream_type = data.get('stream_type')
 
-    # Prepare the response
-    response_data = {
-        'Gross Income': annual_income,
-        'Pension Contributions': pension_contributions,
-        'Income Tax': tax,
-        'NI Contributions': ni,
-        'Student Loan': student_loan_deductions,
-        'Net Income': net_income,
-    }
+    # Convert start_date_str and end_date_str from "yyyy-mm-dd" to "dd-mm-yyyy"
+    if 'start_date_str' in data:
+        start_date = datetime.strptime(data['start_date_str'], "%Y-%m-%d").strftime("%d-%m-%Y")
+        kwargs['start_date_str'] = start_date
+    if 'end_date_str' in data:
+        end_date = datetime.strptime(data['end_date_str'], "%Y-%m-%d").strftime("%d-%m-%Y")
+        kwargs['end_date_str'] = end_date
 
-    return jsonify(response_data)
+    if stream_type == 'income':
+        kwargs = {
+            'config_path': data.get('config_path'),  # Ensure this path is accessible by your Flask app
+            'annual_income': data.get('annual_income'),
+            'start_date_str': data.get('start_date_str'),
+            'end_date_str': data.get('end_date_str'),
+            'personal_allowance': data.get('personal_allowance', 12570),  # Default to 12570 if not provided
+            'bonus': data.get('bonus', 0),  # Default to 0 if not provided
+            'pension_percentage': data.get('pension_percentage', 0),  # Default to 0 if not provided
+            'plan_type': data.get('plan_type', 'Plan 1'),  # Default to 'Plan 1' if not provided
+            'is_scottish': data.get('is_scottish', False),  # Default to False if not provided
+            'is_married': data.get('is_married', False),  # Default to False if not provided
+            'is_blind': data.get('is_blind', False),  # Default to False if not provided
+        }
+    elif stream_type == 'expense':
+        # Initialize with your default values or ensure they're provided in the request
+        kwargs = {
+            'principal': data.get('principal'),
+            'annual_interest_rate': data.get('annual_interest_rate'),
+            'years': data.get('years'),
+            'start_date_str': data.get('start_date_str'),
+        }
+    else:
+        return jsonify({"error": "Invalid stream type provided."}), 400
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    try:
+        # Attempt to add the stream and return the ID
+        stream_id = finance_manager.add_stream(user_id=user_id, stream_type=stream_type, **kwargs)
+        logging.info(f'Stream added successfully: {stream_id}')
+        return jsonify({"stream_id": str(stream_id)}), 201
+    except Exception as e:
+        logging.error(f'Error adding stream: {str(e)}')
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)  # Consider removing debug=True in production
