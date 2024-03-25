@@ -1,3 +1,12 @@
+.stream-form-heading {
+    color: #007bff; /* Primary color */
+    text-align: left;
+    padding: 10px 0;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee; /* Subtle bottom border */
+    font-size: 24px; /* Adjust size as needed */
+  }
+
 .stream-form-container {
     max-width: 600px;
     margin: 30px auto;
