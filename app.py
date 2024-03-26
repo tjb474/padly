@@ -1,47 +1,64 @@
-from flask import Flask, request, render_template
-from income import IncomeCalculator
-import pandas as pd
-# Make sure to include the IncomeCalculator class definition here as well
+import logging
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from finance_manager import FinanceManager
+from util import *
 
 app = Flask(__name__)
+CORS(app)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
-@app.route('/calculate', methods=['POST'])
-def calculate():
-    # Extract the form data
-    annual_income = int(request.form.get('annual_income', 0))
-    bonus = int(request.form.get('bonus', 0))
-    pension_percentage = int(request.form.get('pension_percentage', 0))
-    plan_type = request.form.get('plan_type', 'Plan 1')
-    
-    # Instantiate the IncomeCalculator
-    calculator = IncomeCalculator(
-        annual_income=annual_income,
-        bonus=bonus,
-        pension_percentage=pension_percentage,
-        plan_type=plan_type
-    )
+# Assuming FinanceManager initialization doesn't require parameters,
+# or you have predefined parameters to pass.
+finance_manager = FinanceManager(config_path="config/config.json",
+                                 db_uri="mongodb://localhost:27017/",
+                                 db_name="finance_app_db")
 
-    # Use the calculator to get deductions and net income
-    total_deductions, tax, ni, student_loan_deductions, pension_contributions = calculator.calculate_total_deductions()
-    net_income = calculator.calculate_net_income()
+@app.route('/add_stream', methods=['POST'])
+def add_stream():
+    data = request.json
+    logging.info(f'Received request to add stream: {data}')
+    user_id = data.get('user_id')
+    stream_type = data.get('stream_type')
 
-    # Prepare the DataFrame
-    data = {
-        'Description': ['Gross Income', 'Pension Contributions', 'Income Tax', 'NI Contributions', 'Student Loan', 'Net Income'],
-        'Annual': [annual_income, pension_contributions, tax, ni, student_loan_deductions, net_income]
+    # Common fields for both income and expense streams
+    common_fields = {
+        'start_date_str': format_date(data.get('start_date_str'), default=None),
+        'end_date_str': format_date(data.get('end_date_str'), default=None),
     }
-    df = pd.DataFrame(data)
-    df['Monthly'] = df['Annual'] / 12
 
-    # Convert DataFrame to HTML
-    table_html = df.to_html(index=False)
+    try:
+        if stream_type == 'income':
+            kwargs = {
+                **common_fields,
+                'annual_income': to_int(data.get('annual_income')),
+                'personal_allowance': to_int(data.get('personal_allowance'), 12570),
+                'bonus': to_int(data.get('bonus')),
+                'pension_percentage': to_int(data.get('pension_percentage')),
+                'plan_type': data.get('plan_type', 'Plan 1'),
+                'is_scottish': data.get('is_scottish', False),
+                'is_married': data.get('is_married', False),
+                'is_blind': data.get('is_blind', False),
+            }
+        elif stream_type == 'expense':
+            kwargs = {
+                **common_fields,
+                'principal': to_int(data.get('principal')),
+                'annual_interest_rate': to_float(data.get('annual_interest_rate')),
+                'years': to_int(data.get('years')),
+            }
+        else:
+            return jsonify({"error": "Invalid stream type provided."}), 400
 
-    # Render a template to display the result, pass the DataFrame HTML to the template
-    return render_template('result.html', table_html=table_html)
+        stream_id = finance_manager.add_stream(user_id=user_id, stream_type=stream_type, **kwargs)
+        logging.info(f'Stream added successfully: {stream_id}')
+        return jsonify({"stream_id": str(stream_id)}), 201
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    except Exception as e:
+        logging.error(f'Error adding stream: {str(e)}')
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)  # Consider removing debug=True in production

@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import json
+import logging
 
 
 class IncomeCalculator:
@@ -9,10 +10,10 @@ class IncomeCalculator:
                  pension_percentage=0, plan_type="Plan 1", is_scottish=False, is_married=False, is_blind=False):
         with open(config_path, 'r') as config_file:
             self.config = json.load(config_file)
-        self.annual_income = annual_income
-        self.bonus = bonus
-        self.personal_allowance = personal_allowance
-        self.pension_percentage = pension_percentage
+        self.annual_income = int(annual_income)
+        self.bonus = int(bonus)
+        self.personal_allowance = int(personal_allowance)
+        self.pension_percentage = float(pension_percentage)
         self.plan_type = plan_type
         self.is_scottish = is_scottish
         self.is_married = is_married
@@ -30,19 +31,20 @@ class IncomeCalculator:
 
         for band in tax_bands:
             lower = band['lower']
-            upper = band['upper']
+            upper = band['upper']  # This could be None for the last band
             rate = band['rate']
 
             if taxable_income > lower:
-
-                if upper is None:
-                    taxed_amount = taxable_income - lower
-                else:
-                    taxed_amount = min(taxable_income, upper) - lower
+                # For the last band, treat taxable income as unlimited if upper is None
+                taxed_amount = taxable_income - lower if upper is None else min(taxable_income, upper) - lower
                 tax_from_band = taxed_amount * rate
                 tax += tax_from_band
-                if taxable_income <= upper or upper is None:
-                    break
+
+                # The original problematic break condition is removed
+
+            # Break out of the loop if taxable income is less than the current band's upper limit (and not None)
+            if upper and taxable_income <= upper:
+                break
 
         return tax
 

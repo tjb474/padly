@@ -11,12 +11,13 @@ from income import IncomeCalculator
 from mortgage import MortgageCalculator
 
 class FinanceManager:
-    def __init__(self, db_uri, db_name):
+    def __init__(self, config_path=None, db_uri=None, db_name=None):
+        self.config_path = config_path
         self.client = MongoClient(db_uri)
         self.db = self.client[db_name]
         self.streams_collection = self.db.streams  # Use a 'streams' collection
 
-    def add_stream(self, user_id, stream_type, config_path, **kwargs):
+    def add_stream(self, user_id, stream_type, **kwargs):
         """
         Add a new income or expense stream to MongoDB.
 
@@ -27,7 +28,7 @@ class FinanceManager:
         """
         try:
             if stream_type == 'income':
-                calculator = IncomeCalculator(config_path=config_path, **kwargs)
+                calculator = IncomeCalculator(config_path=self.config_path, **kwargs)
             elif stream_type == 'expense':
                 calculator = MortgageCalculator(**kwargs)
             else:
@@ -112,7 +113,6 @@ class FinanceManager:
 # db_uri = os.getenv("MONGO_DB_URI")
 # db_name = os.getenv("DB_NAME")
 
-finance_manager = FinanceManager(db_uri="mongodb://localhost:27017/", db_name="finance_app_db")
 
 
 # Example configuration and details for adding an income stream
@@ -156,11 +156,15 @@ finance_manager = FinanceManager(db_uri="mongodb://localhost:27017/", db_name="f
 
 # print(f"Income stream added with ID: {stream_id}")
 
-user_id = "tom"  # Example user_id
-user_streams = finance_manager.get_streams_by_user(user_id)
 
-print(f"Streams for user {user_id}:")
-for stream in user_streams:
-    print(stream)
-    # If you've converted data back to DataFrame
-    # print(stream['data'])
+# example of getting a user's streams
+# finance_manager = FinanceManager(config_path="config/config.json",
+#                                  db_uri="mongodb://localhost:27017/",
+#                                  db_name="finance_app_db")
+
+# user_id = "tom"  # Example user_id
+# user_streams = finance_manager.get_streams_by_user(user_id)
+
+# print(f"Streams for user {user_id}:")
+# for stream in user_streams:
+#     print(stream)

@@ -1,0 +1,40 @@
+.app-container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start; /* Adjust alignment as needed */
+}
+
+.stream-form-section {
+  flex: 1 1 33%; /* Use 1/3 of the space */
+  padding: 20px; /* Add padding as necessary */
+}
+
+.other-content-section {
+  flex: 2 1 67%; /* Use the remaining space */
+  padding: 20px; /* Consistent padding */
+  /* Additional styling for your charts or other content */
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .stream-form-section, .other-content-section {
+    flex-basis: auto; /* Allow the sections to auto-adjust */
+  }
+}
+
+.form-field {
+  margin-bottom: 16px;
+}
+
+/* Aligning text and elements */
+.text-center {
+  text-align: center;
+}
+
+/* Consistent spacing for sections */
+.section {
+  margin-bottom: 32px;
+}
